@@ -1,11 +1,13 @@
 import bcrypt from "bcrypt";
 import client from "../db.js";
+import { signToken } from "../utils/jwt.js";
 
 export const findUserByEmail = async (email: string) => {
   return client.user.findUnique({
     where: { email },
   });
 };
+
 export const createUser = async (
   username: string,
   email: string,
@@ -13,15 +15,19 @@ export const createUser = async (
 ) => {
   const hashed = await bcrypt.hash(password, 10);
 
-  const user = await client.user.create({
+  return client.user.create({
     data: {
       username,
       email,
       password: hashed,
     },
-  });
 
-  return user;
+    select: {
+      id: true,
+      username: true,
+      email: true,
+    },
+  });
 };
 
 export const validateUserPassword = async (email: string, password: string) => {
@@ -34,4 +40,14 @@ export const validateUserPassword = async (email: string, password: string) => {
   if (!isMatch) return null;
 
   return user;
+};
+
+export const loginUser = async (email: string, password: string) => {
+  const user = await validateUserPassword(email, password);
+
+  if (!user) {
+    throw new Error("Invalid credentials");
+  }
+
+  return signToken(user.id, user.email);
 };

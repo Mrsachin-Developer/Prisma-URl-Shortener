@@ -1,22 +1,40 @@
-import client from "../db.js";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 
-import * as userService from "../services/user.services.js";
+import * as userServices from "../services/user.services.js";
+import { signToken } from "../utils/jwt.js";
+
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
+
+    const user = await userServices.createUser(username, email, password);
+    return res.status(201).json({
+      message: "User created",
+      user,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password required",
-      });
-    }
-    const user = await userService.validateUserPassword(email, password);
+    const token = await userServices.loginUser(email, password);
 
-    if (!user) {
-      return res.status(400).json({
-        message: "Invalid credential",
-      });
-    }
-  } catch (error) {}
+    res.json({ token });
+  } catch (err: any) {
+    res.status(400).json({
+      message: err.message,
+    });
+  }
 };
